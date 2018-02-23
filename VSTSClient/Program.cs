@@ -58,7 +58,10 @@ namespace VSTSClient
 
             if (help) { ShowHelp("Help - usage is:", option_set); }
 
-            LoadSecrets();
+            if (!LoadSecrets())
+            {
+                Environment.Exit(-1);
+            }
 
             // central connection object
             VssConnection connection = new VssConnection(new Uri(collectionUri), new VssBasicCredential(string.Empty, pat));
@@ -86,13 +89,20 @@ namespace VSTSClient
         /// <summary>
         /// Load secrets from config file
         /// </summary>
-        private static void LoadSecrets()
+        private static bool LoadSecrets()
         {
             collectionUri = ConfigurationManager.AppSettings["Url"];
             pat = ConfigurationManager.AppSettings["PAT"];
 
             if (String.IsNullOrEmpty(collectionUri)) { Console.WriteLine("Cannot find collection URL in appSettings. Add a key with name 'Url'"); }
             if (String.IsNullOrEmpty(pat)) { Console.WriteLine("Cannot find personal access token in appSettings. Add a key with name 'PAT'"); }
+
+            if (String.IsNullOrEmpty(collectionUri))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private static void UpdateProjectsWorkItems(VssConnection connection, string processTypeName, string startWorkItemType, string endWorkItemType)
