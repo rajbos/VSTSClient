@@ -194,9 +194,19 @@ namespace VSTSClient
                 Query = $"Select [System.Id], [System.Title], [System.State], [System.WorkItemType] From WorkItems Where [System.WorkItemType] = '{startWorkItemType}' and [Area Path] Under '{projectName}'"
             };
 
-            var workItems = workItemTrackingClient.QueryByWiqlAsync(wiql).Result;
-            if (logging) Console.WriteLine($"\t\tFound {workItems.WorkItems.Count()} work items for type '{startWorkItemType}'");
-            return workItems.WorkItems.ToList();
+            WorkItemQueryResult workItems;
+            try
+            {
+                workItems = workItemTrackingClient.QueryByWiqlAsync(wiql).Result;
+                if (logging) Console.WriteLine($"\t\tFound {workItems.WorkItems.Count()} work items for type '{startWorkItemType}'");
+                return workItems.WorkItems.ToList();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"\t\t Error loading workitems to count for project '{projectName}' and work item type='{startWorkItemType}'");
+            }
+
+            return null;
         }
 
         private static void GetWorkitems(VssConnection connection, bool update = false)
@@ -394,7 +404,10 @@ namespace VSTSClient
                 if (!String.IsNullOrEmpty(countWITname))
                 {
                     var workitems = GetWorkItemsFromProject(connection, project.Id, project.Name, countWITname, false);
-                    Console.Write($", WorkItems with type '{countWITname}': {workitems.Count()}");
+                    if (workitems != null)
+                    {
+                        Console.Write($", WorkItems with type '{countWITname}': {workitems.Count()}");
+                    }
                 }
 
                 Console.WriteLine();
