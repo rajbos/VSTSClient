@@ -398,7 +398,7 @@ namespace VSTSClient
                     var processTemplateName = processTemplate.Value.FirstOrDefault(item => item.Key == "templateName");
                     var processTemplateId = processTemplate.Value.FirstOrDefault(item => item.Key == "templateTypeId");
 
-                    Console.Write($", ProcessTemplate.Name: {processTemplateName.Value.PadRight(TotalWidth)}");
+                    Console.Write($", ProcessTemplate: {processTemplateName.Value.PadRight(TotalWidth)}");
                 }
 
                 if (!String.IsNullOrEmpty(countWITname))
