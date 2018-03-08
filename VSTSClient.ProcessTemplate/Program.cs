@@ -24,11 +24,22 @@ namespace VSTSProcessZipper
             // load folder info
             basePath = ConfigurationManager.AppSettings["BasePath"]; // todo: check if this has a value, check for existance
 
-            startPath = Path.Combine(basePath,  "Downloaded files"); // todo: check for existance
+            startPath = Path.Combine(basePath, "Downloaded files"); // todo: check for existance
             extractPath = Path.Combine(basePath, "Unzipped files"); // todo: check for existance
             rezipPath = Path.Combine(basePath, "Rezipped files"); // todo: check for existance
             changedFilesPath = Path.Combine(basePath, "Changed files"); // todo: check for existance
 
+            //ExecutionOptions();
+
+            if (Debugger.IsAttached)
+            {
+                Console.WriteLine("Hit 'return'");
+                Console.ReadLine();
+            }
+        }
+
+        private static void ExecutionOptions()
+        {
             var zipFiles = Directory.EnumerateFiles(startPath, "*.zip");
             Console.WriteLine($"Found {zipFiles.Count()} zip files");
 
@@ -44,12 +55,6 @@ namespace VSTSProcessZipper
             CopyFiles(zipFiles, extractPath);
 
             ZipDirectoriesBackToZip(zipFiles, extractPath, rezipPath);
-
-            if (Debugger.IsAttached)
-            {
-                Console.WriteLine("Hit 'return'");
-                Console.ReadLine();
-            }
         }
 
         private static void CopyFiles(IEnumerable<string> zipFiles, string extractPath)
