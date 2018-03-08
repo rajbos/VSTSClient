@@ -69,28 +69,27 @@ namespace VSTSClient
                 Environment.Exit(-1);
             }
 
-            // central connection object
-            VssConnection connection = new VssConnection(new Uri(Helper.CollectionUri), new VssBasicCredential(string.Empty, Helper.PersonalAccessToken));
+            
 
             // execute actions
-            if (list) { ListAllInfo(connection); }
+            if (list) { ListAllInfo(Helper.connection); }
 
-            if (listprojects) { ListAllProjects(connection, countWIT); }
+            if (listprojects) { ListAllProjects(Helper.connection, countWIT); }
 
-            if (workitemcategory) { ListWorkItemCategories(connection, projectName); }
+            if (workitemcategory) { ListWorkItemCategories(Helper.connection, projectName); }
 
-            if (listWorkItems) { GetWorkitems(connection); }
+            if (listWorkItems) { GetWorkitems(Helper.connection); }
 
             if (listQueries)
             {
                 ProjectHttpClient projectClient;
                 IEnumerable<TeamProjectReference> projects;
-                GetProjectList(connection, out projectClient, out projects);
+                GetProjectList(Helper.connection, out projectClient, out projects);
 
                 ListQueries(projects, "epic");
             }
 
-            if (updateWorkItems) { UpdateProjectsWorkItems(connection, processName, startWorkItemType, endWorkItemType); }
+            if (updateWorkItems) { UpdateProjectsWorkItems(Helper.connection, processName, startWorkItemType, endWorkItemType); }
 
             // prevent closure of command window from visual studio
             Console.WriteLine("");
@@ -457,7 +456,7 @@ namespace VSTSClient
 
             ListCollections(connection);
 
-            ListAllProcessTemplates(connection);
+            Helper.ListAllProcessTemplates(connection, TotalWidth);
 
             ListAllProjects(connection, "");
 
@@ -528,27 +527,6 @@ namespace VSTSClient
                 Console.WriteLine($"\t{collection.Name}");
             }
             Console.WriteLine();
-        }
-
-        /// <summary>
-        /// List all process templates on the server
-        /// </summary>
-        /// <param name="connection">Connection to use</param>
-        private static void ListAllProcessTemplates(VssConnection connection)
-        {
-            // list all processes
-            ProcessHttpClient processClient = connection.GetClient<ProcessHttpClient>();
-
-            var processes = processClient.GetProcessesAsync().Result;
-            Console.WriteLine($"Found {processes.Count} processes");
-
-            foreach (var process in processes.OrderBy(item => item.Name))
-            {
-                // var fullProcess = processClient.GetProcessByIdAsync(process.Id).Result;
-                
-                Console.WriteLine($"\t{(process.IsDefault ? "*" : " ")} Name: {process.Name.PadRight(TotalWidth)} Id: {process.Id}, Type: {process.Type}");
-            }
-            Console.WriteLine();
-        }
+        }        
     }
 }

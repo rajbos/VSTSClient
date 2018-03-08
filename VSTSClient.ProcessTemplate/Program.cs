@@ -8,6 +8,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Diagnostics;
 using System.Configuration;
+using VSTSClient.Shared;
+using System.Net.Http;
 
 namespace VSTSProcessZipper
 {
@@ -30,11 +32,41 @@ namespace VSTSProcessZipper
             changedFilesPath = Path.Combine(basePath, "Changed files"); // todo: check for existance
 
             //ExecutionOptions();
+            ExportProcessTemplateZip("Information_Management", startPath);
 
             if (Debugger.IsAttached)
             {
                 Console.WriteLine("Hit 'return'");
                 Console.ReadLine();
+            }
+        }
+
+        private static void ExportProcessTemplateZip(string processTemplateName, string startPath)
+        {
+            var processId = Helper.GetProcessIdFromProcessTemplateName(processTemplateName);
+
+            Byte[] bytes = null;
+            using (var client = Helper.GetRestClient())
+            {
+                HttpResponseMessage response = client.GetAsync("_apis/work/processAdmin/processes/export/" + processId + "?api-version=2.2-preview").Result;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    bytes = response.Content.ReadAsByteArrayAsync().Result; 
+                }
+
+                response.Dispose();
+
+                if (bytes != null)
+                {
+                    //Byte[] bytes = Convert.FromBase64String(vm.data);
+
+                    File.WriteAllBytes(Path.Combine(startPath, processTemplateName + ".zip"), bytes);
+                }
+                else
+                {
+                   // todo
+                }
             }
         }
 

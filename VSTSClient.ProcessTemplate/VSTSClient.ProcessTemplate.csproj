@@ -50,5 +50,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\VSTSClient.Shared\VSTSClient.Shared.csproj">
+      <Project>{452F5654-67BA-44A8-9648-25D663F5482E}</Project>
+      <Name>VSTSClient.Shared</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
