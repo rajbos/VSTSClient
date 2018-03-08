@@ -1,16 +1,13 @@
-﻿using System;
+﻿using Mono.Options;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+using System.Configuration;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Diagnostics;
-using System.Configuration;
-using VSTSClient.Shared;
+using System.Linq;
 using System.Net.Http;
-using Mono.Options;
+using VSTSClient.Shared;
 
 namespace VSTSClient.ProcessTemplate
 {
@@ -67,13 +64,7 @@ namespace VSTSClient.ProcessTemplate
             if (export) { ExportProcessTemplates(); };
 
             //ExecutionOptions();
-
-            // export one template
-            //ExportProcessTemplateZip(new string[] {"Information_Management", "IT Operations"}, startPath);
-
-            // export all templates
-            //ExportProcessTemplateZip(new string[] { }, startPath);
-
+            
             if (Debugger.IsAttached)
             {
                 Console.WriteLine("");
@@ -85,8 +76,8 @@ namespace VSTSClient.ProcessTemplate
         private static void ExportProcessTemplates()
         {
             var processes = Helper.GetAllProcessTemplates(false);
-            // get the list of processes we need to process
 
+            // get the list of processes we need to process
             var processTemplatesListFileName = Path.Combine(basePath, ProcessTemplatesListFileName);
 
             if (!File.Exists(processTemplatesListFileName))
@@ -182,7 +173,12 @@ namespace VSTSClient.ProcessTemplate
             Environment.Exit(-1);
         }
                 
-        private static void ExportProcessTemplateZip(List<Microsoft.TeamFoundation.Core.WebApi.Process> processTemplates, string startPath)
+        /// <summary>
+        /// Export all process templates in the list and save them to disk
+        /// </summary>
+        /// <param name="processTemplates">List of proces templates to export</param>
+        /// <param name="savePath">path to save the files to</param>
+        private static void ExportProcessTemplateZip(List<Microsoft.TeamFoundation.Core.WebApi.Process> processTemplates, string savePath)
         {
             Byte[] bytes = null;
             var success = 0;
@@ -210,7 +206,7 @@ namespace VSTSClient.ProcessTemplate
 
                         if (bytes != null)
                         {
-                            File.WriteAllBytes(Path.Combine(startPath, process.Name + ".zip"), bytes);
+                            File.WriteAllBytes(Path.Combine(savePath, process.Name + ".zip"), bytes);
                         }
                         else
                         {
@@ -225,15 +221,15 @@ namespace VSTSClient.ProcessTemplate
                     }
                 }
 
-                Console.WriteLine($"Exported {success} zip files to location'{startPath}'");
+                Console.WriteLine($"Exported {success} zip files to location'{savePath}'");
             }            
         }
         /// <summary>
         /// Export all process templates in the given array to the export location
         /// </summary>
         /// <param name="processTemplateNames">List of template names to export</param>
-        /// <param name="startPath">Path to save the files to</param>
-        private static void ExportProcessTemplateZip(string[] processTemplateNames, string startPath)
+        /// <param name="savePath">Path to save the files to</param>
+        private static void ExportProcessTemplateZip(string[] processTemplateNames, string savePath)
         {
             var processes = Helper.GetAllProcessTemplates();
 
@@ -260,7 +256,7 @@ namespace VSTSClient.ProcessTemplate
 
                         if (bytes != null)
                         {
-                            File.WriteAllBytes(Path.Combine(startPath, process.Name + ".zip"), bytes);
+                            File.WriteAllBytes(Path.Combine(savePath, process.Name + ".zip"), bytes);
                         }
                         else
                         {
