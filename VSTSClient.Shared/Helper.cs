@@ -36,7 +36,10 @@ namespace VSTSClient.Shared
 
             // central connection object
             connection = new VssConnection(new Uri(Helper.CollectionUri), new VssBasicCredential(string.Empty, Helper.PersonalAccessToken));
-            Console.WriteLine($"Connected to {Helper.CollectionUri}");
+            Console.Write($"Connected to ");
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"{Helper.CollectionUri}");
+            Console.ForegroundColor = ConsoleColor.White;
 
             return true;
         }
