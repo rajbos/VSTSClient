@@ -54,9 +54,24 @@ namespace VSTSClient.Shared
             return client;
         }
 
-        public static object GetProcessIdFromProcessTemplateName(string processTemplateName)
+        public static Guid GetProcessIdFromProcessTemplateName(string processTemplateName)
         {
             return GetProcessTemplate(connection, processTemplateName).Id;
+        }
+
+        /// <summary>
+        /// Get all processtemplates from the VSTS server
+        /// </summary>
+        /// <param name="connection"></param>
+        /// <returns></returns>
+        public static List<Process> GetAllProcessTemplates()
+        {            
+            ProcessHttpClient processClient = connection.GetClient<ProcessHttpClient>();
+
+            var processes = processClient.GetProcessesAsync().Result;
+            Console.WriteLine($"Found {processes.Count} processes");
+
+            return processes;
         }
 
         /// <summary>

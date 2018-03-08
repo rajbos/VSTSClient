@@ -33,7 +33,9 @@ namespace VSTSClient.ProcessTemplate
 
             Helper.LoadSecrets();
             //ExecutionOptions();
-            ExportProcessTemplateZip("Information_Management", startPath);
+
+            //ExportProcessTemplateZip(new string[] {"Information_Management", "IT Operations"}, startPath);
+            ExportProcessTemplateZip(new string[] { }, startPath);
 
             if (Debugger.IsAttached)
             {
@@ -42,29 +44,40 @@ namespace VSTSClient.ProcessTemplate
             }
         }
 
-        private static void ExportProcessTemplateZip(string processTemplateName, string startPath)
+        private static void ExportProcessTemplateZip(string[] processTemplateNames, string startPath)
         {
-            var processId = Helper.GetProcessIdFromProcessTemplateName(processTemplateName);
+            var processes = Helper.GetAllProcessTemplates();
 
             Byte[] bytes = null;
             using (var client = Helper.GetRestClient())
             {
-                HttpResponseMessage response = client.GetAsync("_apis/work/processAdmin/processes/export/" + processId + "?api-version=2.2-preview").Result;
+                // check all processes from the server
+                foreach (var process in processes)
+                {                    
+                    // if the search list is empty, download all processes
+                    // if processTeplateName is in the searh list, download it
+                    if (!processTemplateNames.Any() || processTemplateNames.FirstOrDefault(item => item == process.Name) != null)
+                    {
+                        Console.WriteLine($"Downloading process template export for '{process.Name}'");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    bytes = response.Content.ReadAsByteArrayAsync().Result; 
-                }
+                        HttpResponseMessage response = client.GetAsync("_apis/work/processAdmin/processes/export/" + process.Id + "?api-version=2.2-preview").Result;
 
-                response.Dispose();
+                        if (response.IsSuccessStatusCode)
+                        {
+                            bytes = response.Content.ReadAsByteArrayAsync().Result;
+                        }
 
-                if (bytes != null)
-                {
-                    File.WriteAllBytes(Path.Combine(startPath, processTemplateName + ".zip"), bytes);
-                }
-                else
-                {
-                   // todo: log error
+                        response.Dispose();
+
+                        if (bytes != null)
+                        {
+                            File.WriteAllBytes(Path.Combine(startPath, process.Name + ".zip"), bytes);
+                        }
+                        else
+                        {
+                            // todo: log error
+                        }
+                    }
                 }
             }
         }
