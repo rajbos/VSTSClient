@@ -44,7 +44,11 @@ namespace VSTSClient.Shared
             return true;
         }
         
-
+        /// <summary>
+        /// Central Http client that will set the default values needed to connect
+        /// </summary>
+        /// <param name="projectName"></param>
+        /// <returns></returns>
         public static HttpClient GetRestClient(string projectName = "")
         {
             HttpClient client = new HttpClient();
@@ -67,8 +71,8 @@ namespace VSTSClient.Shared
         /// <summary>
         /// Get all processtemplates from the VSTS server
         /// </summary>
-        /// <param name="connection"></param>
-        /// <returns></returns>
+        /// <param name="logMessages">Indicator if logging will be shown</param>
+        /// <returns>List of all processtemplates in VSTS</returns>
         public static List<Process> GetAllProcessTemplates(bool logMessages = true)
         {            
             ProcessHttpClient processClient = connection.GetClient<ProcessHttpClient>();
@@ -84,10 +88,10 @@ namespace VSTSClient.Shared
         }
 
         /// <summary>
-        /// List all process templates on the server
+        /// List all process templates, with multiple properties
         /// </summary>
-        /// <param name="connection">Connection to use</param>
-        public static void ListAllProcessTemplates(VssConnection connection, int totalWidth)
+        /// <param name="totalWidth">Padding to use to create columns</param>
+        public static void ListAllProcessTemplates(int totalWidth)
         {
             // list all processes
             ProcessHttpClient processClient = connection.GetClient<ProcessHttpClient>();

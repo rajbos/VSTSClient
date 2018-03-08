@@ -38,6 +38,7 @@ namespace VSTSClient.ProcessTemplate
             var import = false;
             var unzip = false;
             var zip = false;
+            var check = false;
 
             var option_set = new OptionSet()
                 .Add("?|help|h", "Prints out the options.", option => help = option != null)
@@ -47,8 +48,12 @@ namespace VSTSClient.ProcessTemplate
                 .Add("e|export", "Export all process templates (located in the saved list file) from VSTS to disk", option => export = option != null)
 
                 .Add("u|unzip", "Unzip all process templates (located in the saved list file)", option => unzip = option != null)
-                .Add("z|zip", "Rezip all process templates (located in the saved list file) from folders to zipfiles", option => zip = option != null)
+                
+                .Add("c|check", "Check if all file contents in the unzipped directories match", option => check = option != null)
+                
 
+                .Add("z|zip", "Rezip all process templates (located in the saved list file) from folders to zipfiles", option => zip = option != null)
+                
                 .Add("i|import", "Import all process templates (located in the saved list file) from VSTS to disk", option => import = option != null)
             ;
 
@@ -71,7 +76,9 @@ namespace VSTSClient.ProcessTemplate
             if (export) { ExportProcessTemplates(); };
 
             if (unzip) { Extract(); }
+            if (check) { CheckFileContents(); }
             if (zip) { ZipDirectoriesBackToZip(); }
+                       
 
             if (import) { ImportProcessTemplates(); };
                         
@@ -743,6 +750,107 @@ namespace VSTSClient.ProcessTemplate
             }
 
             Console.WriteLine($"\tStatus for '{Path.GetFileNameWithoutExtension(originFile)}': {same} files are the same, {diff} files differ in content");
+        }
+
+        static void CheckFileContents()
+        {
+            var processTemplates = GetCleanedProcessTemplateList();
+            Console.WriteLine($"Found {processTemplates.Count} templates to check the files for");
+            Console.WriteLine($"Will now check the files in the folder '{changedFilesPath}' for all templates");
+            // find al xml files in the changedFilesPath
+            var dirInfo = new DirectoryInfo(changedFilesPath);
+            var filesToCheck = dirInfo.EnumerateFiles("*.xml", SearchOption.TopDirectoryOnly);
+            
+            foreach (var originFile in filesToCheck)
+            {
+                Console.WriteLine($"Checking for {Path.GetFileNameWithoutExtension(originFile.FullName)}");
+                var same = 0;
+                var diff = 0;
+                foreach (var process in processTemplates)
+                {
+                    var directoryName = Path.Combine(extractPath, process.Name);
+                    var fileToCheck = GetSubfolderAndFileFor(originFile.Name, directoryName);
+                    
+                    if (!File.Exists(fileToCheck))
+                    {
+                        Console.ForegroundColor = ConsoleColor.Magenta;
+                        Console.WriteLine($"Cannot find file to Check '{fileToCheck}' inside of '{directoryName}'");
+                        continue;
+                    }
+                    // read org file
+                    var originalFileContent = File.ReadAllText(originFile.FullName);
+                    // read file to check
+                    var fileToheckContent = File.ReadAllText(fileToCheck);
+
+                    // check contents
+                    if (string.Compare(originalFileContent, fileToheckContent) > 0)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"File in '{directoryName}' differs from original at '{originFile.FullName}'");
+                        diff++;
+                    }
+                    else
+                    {
+                        //Console.WriteLine($"\tFile in '{directoryName}' is the same as original");
+                        same++;
+                    }
+                }
+
+                Console.ForegroundColor = diff > 0 ? ConsoleColor.Red : ConsoleColor.DarkGreen;                
+                Console.Write($"\tStatus for '{Path.GetFileNameWithoutExtension(originFile.FullName)}': {same} files are the same, ");
+                
+                Console.WriteLine($"{diff} files differ in content");
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+        }
+        
+        private static string GetSubfolderAndFileFor(string name, string directoryName)
+        {
+            // start with the directoryname
+            List<string> paths = new List<string> { directoryName }; 
+
+            // add the neccesary subfolder for the files
+            switch (name)
+            {
+                // Work Item Tracking
+                case "Categories.xml":
+                case "WorkItems.xml":
+                    paths.AddRange(new List<string> { "WorkItem Tracking" });
+                    break;
+                // Work item tracking \ Process
+                case "ProcessConfiguration.xml":
+                    paths.AddRange(new List<string> { "WorkItem Tracking", "Process" });
+                    break;
+                // TypeDefinitions
+                case "Bug.xml":
+                case "Change.xml":
+                case "CodeReviewRequest.xml":
+                case "CodeReviewResponse.xml":
+                case "Epic.xml":
+                case "export.log":
+                case "Feature.xml":
+                case "FeedbackRequest.xml":
+                case "FeedbackResponse.xml":
+                case "Impediment.xml":
+                case "ProductBacklogItem.xml":
+                case "SharedParameter.xml":
+                case "SharedSteps.xml":
+                case "Sprint.xml":
+                case "Task.xml":
+                case "TestCase.xml":
+                case "TestPlan.xml":
+                case "TestSuite.xml":
+                    paths.AddRange(new List<string> { "WorkItem Tracking", "TypeDefinitions" });
+                    break;                
+                default:
+                    LogError(new string[] { $"File '{name}' is not supported yet" });
+                    break;
+            }
+
+            // always add the file itself back:
+            paths.Add(name);
+
+            return Path.Combine(paths.ToArray());
         }
     }
 }

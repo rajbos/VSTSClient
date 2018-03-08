@@ -456,7 +456,7 @@ namespace VSTSClient
 
             ListCollections(connection);
 
-            Helper.ListAllProcessTemplates(connection, TotalWidth);
+            Helper.ListAllProcessTemplates(TotalWidth);
 
             ListAllProjects(connection, "");
 
