@@ -136,9 +136,9 @@ namespace VSTSClient.ProcessTemplate
         private static void ListTemplates(bool saveToDisk, bool hideDefaults = false)
         {
             var processes = Helper.GetAllProcessTemplates();
-
+            
+            // find the process we need
             var nameList = new List<string>();
-
             foreach (var process in processes)
             {
                 if (hideDefaults && process.IsDefault)
@@ -146,8 +146,18 @@ namespace VSTSClient.ProcessTemplate
                     // hide the defaults
                     continue;
                 }
-                Console.WriteLine($"{process.Name}");
                 nameList.Add(process.Name);
+            }
+
+            if (hideDefaults)
+            {
+                Console.WriteLine($"Found {nameList.Count} processes that are not defaults:");
+            }
+            
+            // only display the process we'll use
+            foreach (var name in nameList)
+            {
+                Console.WriteLine($"\t{name}");
             }
 
             if (saveToDisk)
@@ -225,7 +235,7 @@ namespace VSTSClient.ProcessTemplate
             }            
         }
         /// <summary>
-        /// Export all process templates in the given array to the export location
+        /// Export all process templates names in the given array to the export location
         /// </summary>
         /// <param name="processTemplateNames">List of template names to export</param>
         /// <param name="savePath">Path to save the files to</param>

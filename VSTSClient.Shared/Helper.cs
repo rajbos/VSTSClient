@@ -72,8 +72,7 @@ namespace VSTSClient.Shared
 
             if (logMessages)
             {
-                Console.WriteLine($"Found {processes.Count} processes");
-                Console.WriteLine("");
+                Console.WriteLine($"Found {processes.Count} processes, incl. defaults");                
             }
 
             return processes.OrderBy(item => item.Name).ToList();
