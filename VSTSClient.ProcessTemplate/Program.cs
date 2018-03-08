@@ -214,7 +214,7 @@ namespace VSTSClient.ProcessTemplate
                         }
                         else
                         {
-                            // todo: log error
+                            LogError(new string[] { $"\tGot an empty file from VSTS while downloading ProcessTemplate for '{process.Name}'" });
                         }
 
                         success++;
