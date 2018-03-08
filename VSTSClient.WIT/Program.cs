@@ -376,11 +376,11 @@ namespace VSTSClient
                             response.EnsureSuccessStatusCode();
                             string responseBody = response.Content.ReadAsStringAsync().Result;
 
-                            CustomClasses.QueriesList QueriesList = null;
+                            JsonResponseModels.QueriesList QueriesList = null;
                             // convert json to a class
                             try
                             {
-                                QueriesList = JsonConvert.DeserializeObject<CustomClasses.QueriesList>(responseBody);
+                                QueriesList = JsonConvert.DeserializeObject<JsonResponseModels.QueriesList>(responseBody);
                             }
                             catch (Exception e)
                             {

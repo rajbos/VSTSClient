@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace VSTSClient.CustomClasses
+namespace VSTSClient.JsonResponseModels
 {
 
     public class QueriesList
