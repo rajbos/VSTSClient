@@ -7,16 +7,28 @@ using System.Threading.Tasks;
 using System.IO;
 using System.IO.Compression;
 using System.Diagnostics;
+using System.Configuration;
 
 namespace VSTSProcessZipper
 {
     class Program
     {
+        static string basePath;
+        static string startPath;
+        static string extractPath;
+        static string rezipPath;
+        static string changedFilesPath;
+
         static void Main(string[] args)
         {
-            var startPath = @"C:\Users\RobBos\Downloads\Raet";
-            var extractPath = @"C:\Users\RobBos\Downloads\Raet unzip\";
-            var rezipPath = @"C:\Users\RobBos\Downloads\Raet rezip\";
+            // load folder info
+            basePath = ConfigurationManager.AppSettings["BasePath"]; // todo: check if this has a value, check for existance
+
+            startPath = Path.Combine(basePath,  "Downloaded files"); // todo: check for existance
+            extractPath = Path.Combine(basePath, "Unzipped files"); // todo: check for existance
+            rezipPath = Path.Combine(basePath, "Rezipped files"); // todo: check for existance
+            changedFilesPath = Path.Combine(basePath, "Changed files"); // todo: check for existance
+
             var zipFiles = Directory.EnumerateFiles(startPath, "*.zip");
             Console.WriteLine($"Found {zipFiles.Count()} zip files");
 
@@ -24,9 +36,10 @@ namespace VSTSProcessZipper
 
             // CheckAndCopyEpic(zipFiles, extractPath, "Epic", "Feature");
 
-            // CheckFileContentsProcessConfiguration(zipFiles, extractPath, Path.Combine(extractPath, "Aangifte_BE", "WorkItem Tracking", "Process", "ProcessConfiguration.xml"));
-            // CheckFileContentsCategories(zipFiles, extractPath, Path.Combine(extractPath, "Aangifte_BE", "WorkItem Tracking", "Categories.xml"));
-            // CheckFileContentsWorkItems(zipFiles, extractPath, Path.Combine(extractPath, "Aangifte_BE", "WorkItem Tracking", "WorkItems.xml"));
+            // var firstDirectoryName = "Name of the directory to compare files with"
+            // CheckFileContentsProcessConfiguration(zipFiles, extractPath, Path.Combine(extractPath, firstDirectoryName, "WorkItem Tracking", "Process", "ProcessConfiguration.xml"));
+            // CheckFileContentsCategories(zipFiles, extractPath, Path.Combine(extractPath, firstDirectoryName, "WorkItem Tracking", "Categories.xml"));
+            // CheckFileContentsWorkItems(zipFiles, extractPath, Path.Combine(extractPath, firstDirectoryName, "WorkItem Tracking", "WorkItems.xml"));
 
             CopyFiles(zipFiles, extractPath);
 
@@ -57,12 +70,11 @@ namespace VSTSProcessZipper
                 try
                 {
                     // overwrite the files
-                    // CopyFile(categoriesPath, @"C:\Users\RobBos\Downloads\Raet Changed files\Categories.xml");
-                    CopyFile(processConfigurationPath, @"C:\Users\RobBos\Downloads\Raet Changed files\ProcessConfiguration.xml");
-                    // CopyFile(workItemsPath, @"C:\Users\RobBos\Downloads\Raet Changed files\WorkItems.xml");
-                    // CopyFile(featurePath, @"C:\Users\RobBos\Downloads\Raet Changed files\Feature.xml");
-
-                    CopyFile(epicPath, @"C:\Users\RobBos\Downloads\Raet Changed files\Epic.xml");
+                    CopyFile(categoriesPath, Path.Combine(extractPath, changedFilesPath, "Categories.xml"));
+                    CopyFile(processConfigurationPath, Path.Combine(extractPath, changedFilesPath, "ProcessConfiguration.xml"));
+                    CopyFile(workItemsPath, Path.Combine(extractPath, changedFilesPath, "WorkItems.xml"));
+                    CopyFile(featurePath, Path.Combine(extractPath, changedFilesPath, "Feature.xml"));
+                    CopyFile(epicPath, Path.Combine(extractPath, changedFilesPath, "Epic.xml"));
 
                     //Console.WriteLine($"{directoryName} succeeded");
                     success++;
