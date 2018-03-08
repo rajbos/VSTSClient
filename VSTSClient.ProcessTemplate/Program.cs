@@ -84,6 +84,7 @@ namespace VSTSClient.ProcessTemplate
 
         private static List<Microsoft.TeamFoundation.Core.WebApi.Process> GetCleanedProcessTemplateList()
         {
+            var processesTodo = new List<Microsoft.TeamFoundation.Core.WebApi.Process>();
             var processes = Helper.GetAllProcessTemplates(false);
 
             // get the list of processes we need to process
@@ -98,11 +99,10 @@ namespace VSTSClient.ProcessTemplate
                 });
 
                 Console.WriteLine($"");
-                return null;
+                return processesTodo;
             }
 
-            var processTemplates = File.ReadAllLines(processTemplatesListFileName);
-            var processesTodo = new List<Microsoft.TeamFoundation.Core.WebApi.Process>();
+            var processTemplates = File.ReadAllLines(processTemplatesListFileName);            
 
             foreach (var line in processTemplates)
             {
@@ -131,7 +131,7 @@ namespace VSTSClient.ProcessTemplate
 
             if (processesTodo != null)
             {
-                ImportProcessTemplateZip(processesTodo, startPath);
+                ImportProcessTemplateZip(processesTodo, rezipPath);
             }
         }
 
@@ -216,6 +216,11 @@ namespace VSTSClient.ProcessTemplate
             Environment.Exit(-1);
         }
 
+        /// <summary>
+        /// Import the listed templates from disk to VSTS
+        /// </summary>
+        /// <param name="processTemplates">List of templates to import</param>
+        /// <param name="fromPath">Location of the zipfiles on disk</param>
         private static void ImportProcessTemplateZip(List<Microsoft.TeamFoundation.Core.WebApi.Process> processTemplates, string fromPath)
         {
             Byte[] bytes = null;
