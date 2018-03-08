@@ -15,7 +15,7 @@ using System.Threading;
 
 namespace VSTSClient.ProcessTemplate
 {
-    class Program
+    static class Program
     {
         static string basePath;
         static string startPath;
@@ -27,13 +27,8 @@ namespace VSTSClient.ProcessTemplate
 
         static void Main(string[] args)
         {
-            // load folder info
-            basePath = ConfigurationManager.AppSettings["BasePath"]; // todo: check if this has a value, check for existance
-
-            startPath = Path.Combine(basePath, "Downloaded files"); // todo: check for existance
-            extractPath = Path.Combine(basePath, "Unzipped files"); // todo: check for existance
-            rezipPath = Path.Combine(basePath, "Rezipped files"); // todo: check for existance
-            changedFilesPath = Path.Combine(basePath, "Changed files"); // todo: check for existance
+            // check if all folders are available:
+            CheckFolders();
 
             var listTemplates = false;
             var help = false;
@@ -41,15 +36,20 @@ namespace VSTSClient.ProcessTemplate
             var export = false;
             var hideDefaults = false;
             var import = false;
+            var unzip = false;
+            var zip = false;
 
             var option_set = new OptionSet()
                 .Add("?|help|h", "Prints out the options.", option => help = option != null)
                 .Add("l|list", "List available process templates, adding '{s}' will save this list to disk", option => listTemplates = option != null)
                 .Add("s|save", "Save list to disk", option => saveToDisk = option != null)
                 .Add("hd|hide", "Hide default templates", option => hideDefaults = option != null)
-                .Add("e|export", "Export all process templates located in the saved list file from VSTS to disk", option => export = option != null)
+                .Add("e|export", "Export all process templates (located in the saved list file) from VSTS to disk", option => export = option != null)
 
-                .Add("i|import", "Import all process templates located in the saved list file from VSTS to disk", option => import = option != null)
+                .Add("u|unzip", "Unzip all process templates (located in the saved list file)", option => unzip = option != null)
+                .Add("z|zip", "Rezip all process templates (located in the saved list file) from folders to zipfiles", option => zip = option != null)
+
+                .Add("i|import", "Import all process templates (located in the saved list file) from VSTS to disk", option => import = option != null)
             ;
 
             try
@@ -70,9 +70,11 @@ namespace VSTSClient.ProcessTemplate
             if (listTemplates) { ListTemplates(saveToDisk, hideDefaults); };
             if (export) { ExportProcessTemplates(); };
 
-            if (import) { ImportProcessTemplates(); };
+            if (unzip) { Extract(); }
+            if (zip) { ZipDirectoriesBackToZip(); }
 
-            //ExecutionOptions();
+            if (import) { ImportProcessTemplates(); };
+                        
 
             if (Debugger.IsAttached)
             {
@@ -82,6 +84,64 @@ namespace VSTSClient.ProcessTemplate
             }
         }
 
+        /// <summary>
+        /// Load and check all neccesary folders for availablilty
+        /// </summary>
+        private static void CheckFolders()
+        {
+            // load setting from appSettings
+            basePath = ConfigurationManager.AppSettings["BasePath"];
+            
+            if (String.IsNullOrWhiteSpace(basePath))
+            {
+                LogError(new string[] { $"BasePath setting is empty. Please check the config file for this value", "Execution stopped." });
+                Environment.Exit(-1);
+            }
+
+            // init default directories
+            startPath = Path.Combine(basePath, "Downloaded files");
+            extractPath = Path.Combine(basePath, "Unzipped files");
+            rezipPath = Path.Combine(basePath, "Rezipped files");
+            changedFilesPath = Path.Combine(basePath, "Changed files");
+            
+            // check for or create if those folders do exist
+            if (!CheckOrCreateFolders(new string[] { startPath, extractPath, rezipPath, changedFilesPath }))
+            {
+                Environment.Exit(-1);
+            }
+        }
+
+        /// <summary>
+        /// Check the list of folders for their existance. If not present, try to create them
+        /// </summary>
+        /// <param name="directories">Fully expanded directory names to check</param>
+        /// <returns>Succes if all folders are present or created succesfully</returns>
+        private static bool CheckOrCreateFolders(string[] directories)
+        {
+            var errors = 0;
+            foreach (var directory in directories)
+            {
+                if (!Directory.Exists(directory))
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(directory);
+                    }
+                    catch (Exception e)
+                    {
+                        LogError(new string[] { $"Error creating the folder '{directory}'. Exception message: {e.Message}", "Execution stopped." });
+                        errors++;
+                    }
+                }
+            }
+
+            return errors == 0;
+        }
+
+        /// <summary>
+        /// Load the processtemplate list from disk and check if the processes do exists on VSTS
+        /// </summary>
+        /// <returns>The processtemplates that do exists</returns>
         private static List<Microsoft.TeamFoundation.Core.WebApi.Process> GetCleanedProcessTemplateList()
         {
             var processesTodo = new List<Microsoft.TeamFoundation.Core.WebApi.Process>();
@@ -124,7 +184,7 @@ namespace VSTSClient.ProcessTemplate
             return processesTodo;
         }
 
-        // import all process templates
+        /// import all process templates 
         private static void ImportProcessTemplates()
         {
             var processesTodo = GetCleanedProcessTemplateList();
@@ -434,7 +494,7 @@ namespace VSTSClient.ProcessTemplate
             var zipFiles = Directory.EnumerateFiles(startPath, "*.zip");
             Console.WriteLine($"Found {zipFiles.Count()} zip files");
 
-            Extract(zipFiles, extractPath);
+            //Extract(zipFiles, extractPath);
 
             // CheckAndCopyEpic(zipFiles, extractPath, "Epic", "Feature");
 
@@ -445,7 +505,7 @@ namespace VSTSClient.ProcessTemplate
 
             CopyFiles(zipFiles, extractPath);
 
-            ZipDirectoriesBackToZip(zipFiles, extractPath, rezipPath);
+            //ZipDirectoriesBackToZip(zipFiles, extractPath, rezipPath);
         }
 
         private static void CopyFiles(IEnumerable<string> zipFiles, string extractPath)
@@ -497,13 +557,17 @@ namespace VSTSClient.ProcessTemplate
 
             File.Copy(newFileName, pathToOverwrite);
         }
-        static void Extract(IEnumerable<string> zipFiles, string extractPath)
+        
+        /// Unzip all processtemplates to the export folder      
+        private static void Extract()
         {
+            var processTemplates = GetCleanedProcessTemplateList();
+            Console.WriteLine($"Found {processTemplates.Count} templates to unzip");
             var i = 0;
-            foreach (var fileName in zipFiles)
+            foreach (var processTemplate in processTemplates)
             {
-                var directoryName = Path.GetFileNameWithoutExtension(fileName);
-                var newPath = Path.Combine(extractPath, directoryName);
+                var zipFile = Path.Combine(startPath, processTemplate.Name + ".zip");
+                var newPath = Path.Combine(extractPath, processTemplate.Name);
 
                 if (Directory.Exists(newPath))
                 {
@@ -511,26 +575,31 @@ namespace VSTSClient.ProcessTemplate
                 }
 
                 // unzip the file to its own dir in extract path
-                ZipFile.ExtractToDirectory(fileName, newPath);
+                ZipFile.ExtractToDirectory(zipFile, newPath);
                 i++;
             }
             Console.WriteLine($"Extracted {i} zip files to directories.");
         }
-        static void ZipDirectoriesBackToZip(IEnumerable<string> zipFiles, string extractedPath, string rezipPath)
-        {
-            var i = 0;
-            foreach (var fileName in zipFiles)
-            {
-                var directoryName = Path.GetFileNameWithoutExtension(fileName);
 
-                var newFileName = Path.Combine(rezipPath, directoryName) + ".zip";
+        /// Compress the directories back to zipfiles
+        static void ZipDirectoriesBackToZip()
+        {
+            var processTemplates = GetCleanedProcessTemplateList();
+            Console.WriteLine($"Found {processTemplates.Count} templates to unzip");
+            var i = 0;
+
+            foreach (var processTemplate in processTemplates)
+            {
+                var directoryToZip = Path.Combine(extractPath, processTemplate.Name);
+
+                var newFileName = Path.Combine(rezipPath, processTemplate.Name + ".zip");
                 if (File.Exists(newFileName))
                 {
                     File.Delete(newFileName);
                 }
 
                 // rezip the file to its new zip file based on the dir in extract path
-                ZipFile.CreateFromDirectory(Path.Combine(extractedPath, directoryName), newFileName);
+                ZipFile.CreateFromDirectory(directoryToZip, newFileName);
                 i++;
             }
             Console.WriteLine($"Zipped {i} directories back up");

@@ -17,6 +17,7 @@ namespace VSTSClient.Shared
         public static string CollectionUri { get; set; }
         public static string PersonalAccessToken { get; set; }
         public static VssConnection connection { get; set; }
+
         /// <summary>
         /// Load secrets from config file
         /// </summary>
@@ -35,6 +36,7 @@ namespace VSTSClient.Shared
 
             // central connection object
             connection = new VssConnection(new Uri(Helper.CollectionUri), new VssBasicCredential(string.Empty, Helper.PersonalAccessToken));
+            Console.WriteLine($"Connected to {Helper.CollectionUri}");
 
             return true;
         }
