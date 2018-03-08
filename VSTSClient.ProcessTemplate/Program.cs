@@ -11,7 +11,7 @@ using System.Configuration;
 using VSTSClient.Shared;
 using System.Net.Http;
 
-namespace VSTSProcessZipper
+namespace VSTSClient.ProcessTemplate
 {
     class Program
     {
