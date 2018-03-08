@@ -11,6 +11,7 @@ using System.Net.Http.Headers;
 using VSTSClient.Shared;
 using VSTSClient.ProcessTemplate.JsonResponseModels;
 using Newtonsoft.Json;
+using System.Threading;
 
 namespace VSTSClient.ProcessTemplate
 {
@@ -260,6 +261,29 @@ namespace VSTSClient.ProcessTemplate
                             var responseBody = response.Content.ReadAsStringAsync().Result;
 
                             var importRepsonse = JsonConvert.DeserializeObject<ImportRepsonse>(responseBody);
+
+                            if (importRepsonse.validationResults.Any())
+                            {
+                                // errors during validation check?
+                                var messages = new List<string> { $"\tValidation error importing process template for '{process.Name}'"};
+                                foreach (var validationResult in importRepsonse.validationResults)
+                                {
+                                    messages.Add($"\tDescription: {validationResult.description}, Error: {validationResult.error}, File: {validationResult.file}, Issuetype: {validationResult.issueType}, Line:{validationResult.line}");
+                                }
+                                LogError(messages.ToArray());
+
+                                // go to the next process
+                                continue;
+                            }
+
+                            Console.WriteLine("\tChecking status...");
+                            var started = DateTime.Now;
+                            var importIncomplete = true;
+                            while (((DateTime.Now - started).TotalMinutes < 3 && importIncomplete)) //todo: create setting for duration
+                            {                                
+                                importIncomplete = !WaitForImportProcessStatus(importRepsonse.promoteJobId);
+                                Thread.Sleep(2500);
+                            }
                         }
 
                         response.Dispose();
@@ -274,6 +298,33 @@ namespace VSTSClient.ProcessTemplate
 
                 Console.WriteLine($"Imported {success} zip files");
             }
+        }
+
+        /// <summary>
+        /// Check the status of the import process step
+        /// </summary>
+        /// <param name="promoteJobId"></param>
+        private static bool WaitForImportProcessStatus(string promoteJobId)
+        {
+            var completed = false;
+            using (var client = Helper.GetRestClient())
+            {
+                HttpResponseMessage response = client.GetAsync("_apis/work/processAdmin/processes/status/" + promoteJobId).Result;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseBody = response.Content.ReadAsStringAsync().Result;
+
+                    var promoteRepsonse = JsonConvert.DeserializeObject<PromoteStatus>(responseBody);
+
+                    Console.WriteLine($"\t\t{DateTime.Now.ToLongTimeString()} projects pending: {promoteRepsonse.pending}, projects complete:{promoteRepsonse.complete}, import succesful: {promoteRepsonse.successful}, remaining retries: {promoteRepsonse.remainingRetries}, message: {promoteRepsonse.message}");
+                    completed = promoteRepsonse.pending == 0;
+                }
+
+                response.Dispose();
+            }
+
+            return completed;
         }
 
         /// <summary>
