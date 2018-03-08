@@ -64,14 +64,19 @@ namespace VSTSClient.Shared
         /// </summary>
         /// <param name="connection"></param>
         /// <returns></returns>
-        public static List<Process> GetAllProcessTemplates()
+        public static List<Process> GetAllProcessTemplates(bool logMessages = true)
         {            
             ProcessHttpClient processClient = connection.GetClient<ProcessHttpClient>();
 
             var processes = processClient.GetProcessesAsync().Result;
-            Console.WriteLine($"Found {processes.Count} processes");
 
-            return processes;
+            if (logMessages)
+            {
+                Console.WriteLine($"Found {processes.Count} processes");
+                Console.WriteLine("");
+            }
+
+            return processes.OrderBy(item => item.Name).ToList();
         }
 
         /// <summary>
