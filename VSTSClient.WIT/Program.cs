@@ -15,6 +15,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using VSTSClient.Shared;
 
 namespace VSTSClient
 {
@@ -22,8 +23,6 @@ namespace VSTSClient
     {
         private const int TotalWidth = 40;
                
-        private static string collectionUri = "";
-        private static string pat = "";
         static void Main(string[] args)
         {
             var help = false;
@@ -65,13 +64,13 @@ namespace VSTSClient
 
             if (help) { ShowHelp("Help - usage is:", option_set); }
 
-            if (!LoadSecrets())
+            if (!Helper.LoadSecrets())
             {
                 Environment.Exit(-1);
             }
 
             // central connection object
-            VssConnection connection = new VssConnection(new Uri(collectionUri), new VssBasicCredential(string.Empty, pat));
+            VssConnection connection = new VssConnection(new Uri(Helper.CollectionUri), new VssBasicCredential(string.Empty, Helper.PersonalAccessToken));
 
             // execute actions
             if (list) { ListAllInfo(connection); }
@@ -101,25 +100,6 @@ namespace VSTSClient
                 Console.WriteLine($"Hit enter to close the application");
                 Console.ReadLine();
             }
-        }
-
-        /// <summary>
-        /// Load secrets from config file
-        /// </summary>
-        private static bool LoadSecrets()
-        {
-            collectionUri = ConfigurationManager.AppSettings["Url"];
-            pat = ConfigurationManager.AppSettings["PAT"];
-
-            if (String.IsNullOrEmpty(collectionUri)) { Console.WriteLine("Cannot find collection URL in appSettings. Add a key with name 'Url'"); }
-            if (String.IsNullOrEmpty(pat)) { Console.WriteLine("Cannot find personal access token in appSettings. Add a key with name 'PAT'"); }
-
-            if (String.IsNullOrEmpty(collectionUri) || String.IsNullOrEmpty(pat))
-            {
-                return false;
-            }
-
-            return true;
         }
 
         private static void UpdateProjectsWorkItems(VssConnection connection, string processTypeName, string startWorkItemType, string endWorkItemType)
@@ -387,12 +367,12 @@ namespace VSTSClient
                     client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
                     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
-                        Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes($":{pat}")));
+                        Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes($":{Helper.PersonalAccessToken}")));
 
                     foreach (var project in projects)
                     {
                         // get the list of queries
-                        using (HttpResponseMessage response = client.GetAsync($"{collectionUri}/{project.Name}/_apis/wit/queries?$expand=all&$depth=1&api-version=4.1-preview").Result)
+                        using (HttpResponseMessage response = client.GetAsync($"{Helper.CollectionUri}/{project.Name}/_apis/wit/queries?$expand=all&$depth=1&api-version=4.1-preview").Result)
                         {
                             response.EnsureSuccessStatusCode();
                             string responseBody = response.Content.ReadAsStringAsync().Result;
@@ -473,7 +453,7 @@ namespace VSTSClient
         /// <param name="connection">Connection to use</param>
         private static void ListAllInfo(VssConnection connection)
         {
-            Console.WriteLine($"Connection to vsts on '{collectionUri}'");
+            Console.WriteLine($"Connection to vsts on '{Helper.CollectionUri}'");
 
             ListCollections(connection);
 

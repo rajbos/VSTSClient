@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VSTSClient.WIT", "VSTSClien
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VSTSClient.ProcessTemplate", "VSTSClient.ProcessTemplate\VSTSClient.ProcessTemplate.csproj", "{22B1D6AC-0C77-4298-9639-20D024A0C647}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VSTSClient.Shared", "VSTSClient.Shared\VSTSClient.Shared.csproj", "{452F5654-67BA-44A8-9648-25D663F5482E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{22B1D6AC-0C77-4298-9639-20D024A0C647}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{22B1D6AC-0C77-4298-9639-20D024A0C647}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{22B1D6AC-0C77-4298-9639-20D024A0C647}.Release|Any CPU.Build.0 = Release|Any CPU
+		{452F5654-67BA-44A8-9648-25D663F5482E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{452F5654-67BA-44A8-9648-25D663F5482E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{452F5654-67BA-44A8-9648-25D663F5482E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{452F5654-67BA-44A8-9648-25D663F5482E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
