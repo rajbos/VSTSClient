@@ -44,7 +44,7 @@ namespace VSTSClient.Shared
         {
             HttpClient client = new HttpClient();
 
-            client.BaseAddress = new Uri($"{Helper.CollectionUri } /{ projectName}");
+            client.BaseAddress = new Uri($"{Helper.CollectionUri}/{projectName}");
 
             client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
             
