@@ -5,11 +5,16 @@ using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
 using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 using Mono.Options;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 
 namespace VSTSClient
 {
@@ -32,10 +37,12 @@ namespace VSTSClient
             var endWorkItemType = "";
             var countWIT = "";
             var projectName = "";
+            var listQueries = false;
 
             var option_set = new OptionSet()
                 .Add("?|help|h", "Prints out the options.", option => help = option != null)
                 .Add("l|list", "List available info", option => list = option != null)
+                .Add("lq|listqueries", "List queries", option => listQueries = option != null)
                 .Add("lp|listprojects", "List available project info", option => listprojects = option != null)
                 .Add("c|categories", "List workitem categories", option => workitemcategory = option != null)
                 .Add("w|workitems", "List workitems", option => listWorkItems = option != null)
@@ -75,12 +82,22 @@ namespace VSTSClient
 
             if (listWorkItems) { GetWorkitems(connection); }
 
+            if (listQueries)
+            {
+                ProjectHttpClient projectClient;
+                IEnumerable<TeamProjectReference> projects;
+                GetProjectList(connection, out projectClient, out projects);
+
+                ListQueries(projects, "epic");
+            }
+
             if (updateWorkItems) { UpdateProjectsWorkItems(connection, processName, startWorkItemType, endWorkItemType); }
 
             // prevent closure of command window from visual studio
             Console.WriteLine("");
             if (Debugger.IsAttached)
             {
+                Console.WriteLine($"");
                 Console.WriteLine($"Hit enter to close the application");
                 Console.ReadLine();
             }
@@ -97,7 +114,7 @@ namespace VSTSClient
             if (String.IsNullOrEmpty(collectionUri)) { Console.WriteLine("Cannot find collection URL in appSettings. Add a key with name 'Url'"); }
             if (String.IsNullOrEmpty(pat)) { Console.WriteLine("Cannot find personal access token in appSettings. Add a key with name 'PAT'"); }
 
-            if (String.IsNullOrEmpty(collectionUri))
+            if (String.IsNullOrEmpty(collectionUri) || String.IsNullOrEmpty(pat))
             {
                 return false;
             }
@@ -203,7 +220,7 @@ namespace VSTSClient
             }
             catch (Exception e)
             {
-                Console.WriteLine($"\t\t Error loading workitems to count for project '{projectName}' and work item type='{startWorkItemType}'");
+                Console.WriteLine($"\t\t Error loading workitems to count for project '{projectName}' and work item type='{startWorkItemType}': {e.Message}");
             }
 
             return null;
@@ -355,6 +372,101 @@ namespace VSTSClient
             Environment.Exit(-1);
         }
 
+        private static void ListQueries(IEnumerable<TeamProjectReference> projects, string textToFind, bool spoolToDisk = false)
+        {
+            var exportFolder = @"C:\VSTSClientExport\"; // todo extract to central location
+            if (spoolToDisk)
+            {
+                Console.WriteLine($"Listing all queries to the exportfolder: '{exportFolder}'");
+            }
+
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
+                        Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes($":{pat}")));
+
+                    foreach (var project in projects)
+                    {
+                        // get the list of queries
+                        using (HttpResponseMessage response = client.GetAsync($"{collectionUri}/{project.Name}/_apis/wit/queries?$expand=all&$depth=1&api-version=4.1-preview").Result)
+                        {
+                            response.EnsureSuccessStatusCode();
+                            string responseBody = response.Content.ReadAsStringAsync().Result;
+
+                            CustomClasses.QueriesList QueriesList = null;
+                            // convert json to a class
+                            try
+                            {
+                                QueriesList = JsonConvert.DeserializeObject<CustomClasses.QueriesList>(responseBody);
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine($"Error converting json to class: {e.Message}");
+                                continue;
+                            }
+
+                            if (QueriesList.value == null)
+                            {
+                                Console.WriteLine("");
+                                continue;
+                            }
+
+                            foreach (var folder in QueriesList.value)
+                            {
+                                if (folder.children == null)
+                                {
+                                    // skip this item
+                                    continue;
+                                }
+
+                                var projectLogged = false;
+
+                                foreach (var query in folder.children)
+                                {
+                                    if (query != null && string.IsNullOrEmpty(query.wiql))
+                                    {
+                                        // skip this query
+                                        continue;
+                                    }
+
+                                    if (query.wiql.ToLowerInvariant().Contains(textToFind))
+                                    {   
+                                        // Found the search term in a query  
+                                        
+                                        var projectName = project.Name;
+                                        var linkUrl = query._links.html.href;
+                                        var queryName = query.name;
+
+                                        if (!projectLogged)
+                                        {
+                                            Console.WriteLine($"{projectName}");
+                                            projectLogged = true;
+                                        }
+
+                                        Console.WriteLine($"\t{queryName} - {linkUrl}");
+                                    }
+                                }
+                            }
+
+                            if (responseBody.ToLowerInvariant().Contains("epic") && spoolToDisk)
+                            {
+                                var filePath = Path.Combine(exportFolder, $"{project.Name}.json");
+                                File.WriteAllText(filePath, responseBody);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+        }
+
         /// <summary>
         /// List all available hierarchy information from the server
         /// </summary>
@@ -380,9 +492,9 @@ namespace VSTSClient
         private static void ListAllProjects(VssConnection connection, string countWITname)
         {
             // get all projects
-            ProjectHttpClient projectClient = connection.GetClient<ProjectHttpClient>();
-
-            IEnumerable<TeamProjectReference> projects = projectClient.GetProjects().Result;
+            ProjectHttpClient projectClient;
+            IEnumerable<TeamProjectReference> projects;
+            GetProjectList(connection, out projectClient, out projects);
 
             Console.WriteLine($"Found {projects.Count()} projects");
             foreach (var project in projects.OrderBy(item => item.Name))
@@ -396,7 +508,7 @@ namespace VSTSClient
                 {
                     // find the template info:
                     var processTemplateName = processTemplate.Value.FirstOrDefault(item => item.Key == "templateName");
-                    var processTemplateId = processTemplate.Value.FirstOrDefault(item => item.Key == "templateTypeId");
+                    //var processTemplateId = processTemplate.Value.FirstOrDefault(item => item.Key == "templateTypeId");
 
                     Console.Write($", ProcessTemplate: {processTemplateName.Value.PadRight(TotalWidth)}");
                 }
@@ -406,12 +518,18 @@ namespace VSTSClient
                     var workitems = GetWorkItemsFromProject(connection, project.Id, project.Name, countWITname, false);
                     if (workitems != null)
                     {
-                        Console.Write($", WorkItems with type '{countWITname}': {workitems.Count()}");
+                        Console.Write($", WorkItems with type '{countWITname}': {workitems.Count}");
                     }
                 }
 
                 Console.WriteLine();
             }
+        }
+
+        private static void GetProjectList(VssConnection connection, out ProjectHttpClient projectClient, out IEnumerable<TeamProjectReference> projects)
+        {
+            projectClient = connection.GetClient<ProjectHttpClient>();
+            projects = projectClient.GetProjects().Result.OrderBy(item => item.Name);
         }
 
         /// <summary>
@@ -442,11 +560,11 @@ namespace VSTSClient
             ProcessHttpClient processClient = connection.GetClient<ProcessHttpClient>();
 
             var processes = processClient.GetProcessesAsync().Result;
-            Console.WriteLine($"Found {processes.Count()} processes");
+            Console.WriteLine($"Found {processes.Count} processes");
 
             foreach (var process in processes.OrderBy(item => item.Name))
             {
-                var fullProcess = processClient.GetProcessByIdAsync(process.Id).Result;
+                // var fullProcess = processClient.GetProcessByIdAsync(process.Id).Result;
                 
                 Console.WriteLine($"\t{(process.IsDefault ? "*" : " ")} Name: {process.Name.PadRight(TotalWidth)} Id: {process.Id}, Type: {process.Type}");
             }
