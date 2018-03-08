@@ -7,7 +7,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using VSTSClient.Shared;
+using VSTSClient.ProcessTemplate.JsonResponseModels;
+using Newtonsoft.Json;
 
 namespace VSTSClient.ProcessTemplate
 {
@@ -36,13 +39,16 @@ namespace VSTSClient.ProcessTemplate
             var saveToDisk = false;
             var export = false;
             var hideDefaults = false;
+            var import = false;
 
             var option_set = new OptionSet()
                 .Add("?|help|h", "Prints out the options.", option => help = option != null)
                 .Add("l|list", "List available process templates, adding '{s}' will save this list to disk", option => listTemplates = option != null)
                 .Add("s|save", "Save list to disk", option => saveToDisk = option != null)
                 .Add("hd|hide", "Hide default templates", option => hideDefaults = option != null)
-                .Add("e|export", "Export all process templates located in the export file from VSTS to disk", option => export = option != null)
+                .Add("e|export", "Export all process templates located in the saved list file from VSTS to disk", option => export = option != null)
+
+                .Add("i|import", "Import all process templates located in the saved list file from VSTS to disk", option => import = option != null)
             ;
 
             try
@@ -63,8 +69,10 @@ namespace VSTSClient.ProcessTemplate
             if (listTemplates) { ListTemplates(saveToDisk, hideDefaults); };
             if (export) { ExportProcessTemplates(); };
 
+            if (import) { ImportProcessTemplates(); };
+
             //ExecutionOptions();
-            
+
             if (Debugger.IsAttached)
             {
                 Console.WriteLine("");
@@ -73,7 +81,7 @@ namespace VSTSClient.ProcessTemplate
             }
         }
 
-        private static void ExportProcessTemplates()
+        private static List<Microsoft.TeamFoundation.Core.WebApi.Process> GetCleanedProcessTemplateList()
         {
             var processes = Helper.GetAllProcessTemplates(false);
 
@@ -82,14 +90,14 @@ namespace VSTSClient.ProcessTemplate
 
             if (!File.Exists(processTemplatesListFileName))
             {
-                LogError(new string[] 
+                LogError(new string[]
                 {
                     $"Cannot find process list file in location '{processTemplatesListFileName}'",
                     $"Please use the list function in combination with the save option first"
                 });
 
                 Console.WriteLine($"");
-                return;
+                return null;
             }
 
             var processTemplates = File.ReadAllLines(processTemplatesListFileName);
@@ -112,7 +120,31 @@ namespace VSTSClient.ProcessTemplate
                 processesTodo.Add(locatedProcess);
             }
 
-            ExportProcessTemplateZip(processesTodo, startPath);
+            return processesTodo;
+        }
+
+        // import all process templates
+        private static void ImportProcessTemplates()
+        {
+            var processesTodo = GetCleanedProcessTemplateList();
+
+            if (processesTodo != null)
+            {
+                ImportProcessTemplateZip(processesTodo, startPath);
+            }
+        }
+
+        /// <summary>
+        /// Export all process templates (loaded from exported name file) from VSTS to disk
+        /// </summary>
+        private static void ExportProcessTemplates()
+        {
+            var processesTodo = GetCleanedProcessTemplateList();
+
+            if (processesTodo != null)
+            {
+                ExportProcessTemplateZip(processesTodo, startPath);
+            }
         }
 
         /// <summary>
@@ -182,7 +214,68 @@ namespace VSTSClient.ProcessTemplate
             option_set.WriteOptionDescriptions(Console.Error);
             Environment.Exit(-1);
         }
-                
+
+        private static void ImportProcessTemplateZip(List<Microsoft.TeamFoundation.Core.WebApi.Process> processTemplates, string fromPath)
+        {
+            Byte[] bytes = null;
+            var success = 0;
+
+            Console.WriteLine($"Starting to import {processTemplates.Count} templates from {fromPath} to VSTS");
+            Console.WriteLine("");
+
+            using (var client = Helper.GetRestClient())
+            {
+                // reset headers to zip file
+                client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/zip"));                
+
+                // check all processes from the server
+                foreach (var process in processTemplates)
+                {
+                    try
+                    {
+                        // read file from disk:
+                        var fileName = Path.Combine(fromPath, process.Name + ".zip");
+                        if (!File.Exists(fileName))
+                        {
+                            LogError(new string[] 
+                            {
+                                $"Cannot find zip file for process {process.Name} in location {fromPath}",
+                                $"This template will be skipped."
+                            });
+
+                            continue;
+                        }
+
+                        // read file contents
+                        bytes = File.ReadAllBytes(fileName);
+                        ByteArrayContent content = new ByteArrayContent(bytes);
+                        content.Headers.ContentType = new MediaTypeHeaderValue("application/zip");
+
+                        Console.Write($"\tUploading process template '{process.Name}'");
+                        HttpResponseMessage response = client.PostAsync("_apis/work/processAdmin/processes/import?ignoreWarnings=true&api-version=2.2-preview", content).Result;
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            Console.WriteLine($"\t\t upload successful!");
+                            var responseBody = response.Content.ReadAsStringAsync().Result;
+
+                            var importRepsonse = JsonConvert.DeserializeObject<ImportRepsonse>(responseBody);
+                        }
+
+                        response.Dispose();
+                                                
+                        success++;
+                    }
+                    catch (Exception e)
+                    {
+                        LogError(new string[] { $"\tError importing process template for '{process.Name}', error: {e.Message}" });
+                    }
+                }
+
+                Console.WriteLine($"Imported {success} zip files");
+            }
+        }
+
         /// <summary>
         /// Export all process templates in the list and save them to disk
         /// </summary>
