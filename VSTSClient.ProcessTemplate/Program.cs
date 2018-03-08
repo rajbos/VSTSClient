@@ -39,22 +39,23 @@ namespace VSTSClient.ProcessTemplate
             var unzip = false;
             var zip = false;
             var check = false;
+            var copy = false;
 
             var option_set = new OptionSet()
                 .Add("?|help|h", "Prints out the options.", option => help = option != null)
                 .Add("l|list", "List available process templates, adding '{s}' will save this list to disk", option => listTemplates = option != null)
                 .Add("s|save", "Save list to disk", option => saveToDisk = option != null)
                 .Add("hd|hide", "Hide default templates", option => hideDefaults = option != null)
-                .Add("e|export", "Export all process templates (located in the saved list file) from VSTS to disk", option => export = option != null)
+                .Add("e|export", "Export all process templates (located in the saved listfile) from VSTS to disk", option => export = option != null)
 
-                .Add("u|unzip", "Unzip all process templates (located in the saved list file)", option => unzip = option != null)
+                .Add("u|unzip", "Unzip all process templates (located in the saved listfile)", option => unzip = option != null)
                 
-                .Add("c|check", "Check if all file contents in the unzipped directories match", option => check = option != null)
-                
+                .Add("ch|check", "Check if all file contents in the unzipped directories match", option => check = option != null)
+                .Add("co|copy", "Copy alls from the changed directory to the process template directories (oaded from the saved listfile) ", option => copy = option != null)
 
-                .Add("z|zip", "Rezip all process templates (located in the saved list file) from folders to zipfiles", option => zip = option != null)
+                .Add("z|zip", "Rezip all process templates (located in the saved listfile) from folders to zipfiles", option => zip = option != null)
                 
-                .Add("i|import", "Import all process templates (located in the saved list file) from VSTS to disk", option => import = option != null)
+                .Add("i|import", "Import all process templates (located in the saved listfile) from VSTS to disk", option => import = option != null)
             ;
 
             try
@@ -76,9 +77,11 @@ namespace VSTSClient.ProcessTemplate
             if (export) { ExportProcessTemplates(); };
 
             if (unzip) { Extract(); }
+
             if (check) { CheckFileContents(); }
-            if (zip) { ZipDirectoriesBackToZip(); }
-                       
+            if (copy) { CopyFiles(); }
+
+            if (zip) { ZipDirectoriesBackToZip(); }                       
 
             if (import) { ImportProcessTemplates(); };
                         
@@ -447,7 +450,7 @@ namespace VSTSClient.ProcessTemplate
                     }
                 }
 
-                Console.WriteLine($"Exported {success} zip files to location'{savePath}'");
+                Console.WriteLine($"Exported {success} zip files to location '{savePath}'");
             }            
         }
         /// <summary>
@@ -492,31 +495,12 @@ namespace VSTSClient.ProcessTemplate
                 }
             }
         }
-
-        /// <summary>
-        /// All old calls together
-        /// </summary>
-        private static void ExecutionOptions()
+        
+        private static void CopyFilesOld()
         {
-            var zipFiles = Directory.EnumerateFiles(startPath, "*.zip");
-            Console.WriteLine($"Found {zipFiles.Count()} zip files");
+            IEnumerable<string> zipFiles = new List<string>();
+            string extractPath = "";
 
-            //Extract(zipFiles, extractPath);
-
-            // CheckAndCopyEpic(zipFiles, extractPath, "Epic", "Feature");
-
-            // var firstDirectoryName = "Name of the directory to compare files with"
-            // CheckFileContentsProcessConfiguration(zipFiles, extractPath, Path.Combine(extractPath, firstDirectoryName, "WorkItem Tracking", "Process", "ProcessConfiguration.xml"));
-            // CheckFileContentsCategories(zipFiles, extractPath, Path.Combine(extractPath, firstDirectoryName, "WorkItem Tracking", "Categories.xml"));
-            // CheckFileContentsWorkItems(zipFiles, extractPath, Path.Combine(extractPath, firstDirectoryName, "WorkItem Tracking", "WorkItems.xml"));
-
-            CopyFiles(zipFiles, extractPath);
-
-            //ZipDirectoriesBackToZip(zipFiles, extractPath, rezipPath);
-        }
-
-        private static void CopyFiles(IEnumerable<string> zipFiles, string extractPath)
-        {
             var failed = 0;
             var success = 0;
             foreach (var fileName in zipFiles)
@@ -550,19 +534,43 @@ namespace VSTSClient.ProcessTemplate
             }
             Console.WriteLine($"Copy files is done. Success:'{success}', failed: {failed}");
         }
-        private static void CopyFile(string pathToOverwrite, string newFileName)
+
+        static void CopyFiles()
         {
-            if (!File.Exists(newFileName))
+            var processTemplates = GetCleanedProcessTemplateList();
+            Console.WriteLine($"Found {processTemplates.Count} templates to copy the files for");
+            Console.WriteLine($"Will now copy the files in the folder '{changedFilesPath}' to all templates directories");
+            // find al xml files in the changedFilesPath
+            var dirInfo = new DirectoryInfo(changedFilesPath);
+            var filesToCheck = dirInfo.EnumerateFiles("*.xml", SearchOption.TopDirectoryOnly);
+
+            foreach (var originFile in filesToCheck)
             {
-                Console.WriteLine($"Cannot find file to copy '{newFileName}'");
+                Console.WriteLine($"Copying for {Path.GetFileName(originFile.FullName)}");
+                foreach (var process in processTemplates)
+                {
+                    var destinationDirectoryName = Path.Combine(extractPath, process.Name);
+                    var fileToCopy = GetSubfolderAndFileFor(originFile.Name, destinationDirectoryName);
+
+                    CopyFile(fileToCopy, originFile.FullName);
+                }
+                Console.WriteLine($"\tDone");
+            }
+        }
+
+        private static void CopyFile(string destFileName, string sourceFileName)
+        {
+            if (!File.Exists(sourceFileName))
+            {
+                Console.WriteLine($"Cannot find file to copy '{sourceFileName}'");
             }
 
-            if (File.Exists(pathToOverwrite))
+            if (File.Exists(destFileName))
             {
-                File.Delete(pathToOverwrite);
+                File.Delete(destFileName);
             }
 
-            File.Copy(newFileName, pathToOverwrite);
+            File.Copy(sourceFileName, destFileName);
         }
         
         /// Unzip all processtemplates to the export folder      
@@ -636,122 +644,7 @@ namespace VSTSClient.ProcessTemplate
                 File.Copy(typeFromFileName, typeToFileName);
             }
         }
-        static void CheckFileContentsProcessConfiguration(IEnumerable<string> zipFiles, string extractPath, string originFile)
-        {
-            Console.WriteLine($"Checking for {Path.GetFileNameWithoutExtension(originFile)}");
-            var same = 0;
-            var diff = 0;
-            foreach (var fileName in zipFiles)
-            {
-                var directoryName = Path.GetFileNameWithoutExtension(fileName);
-                var directoryToEditName = Path.Combine(extractPath, directoryName, "WorkItem Tracking", "Process", "ProcessConfiguration.xml");
-                // find typefrom file
-                var fileToCheck = $"{directoryToEditName}";
-
-
-                if (!File.Exists(fileToCheck))
-                {
-                    Console.WriteLine($"Cannot find file to Check '{fileToCheck}' inside of '{directoryName}'");
-                    continue;
-                }
-                // read org file
-                var originalFileContent = File.ReadAllText(originFile);
-                // read file to check
-                var fileToheckContent = File.ReadAllText(fileToCheck);
-                // check contents
-
-                if (string.Compare(originalFileContent, fileToheckContent) > 0)
-                {
-                    Console.WriteLine($"File in '{directoryName}' differs from original");
-                    diff++;
-                }
-                else
-                {
-                    //Console.WriteLine($"\tFile in '{directoryName}' is the same as original");
-                    same++;
-                }
-            }
-
-            Console.WriteLine($"\tStatus for '{Path.GetFileNameWithoutExtension(originFile)}': {same} files are the same, {diff} files differ in content");
-        }
-        static void CheckFileContentsCategories(IEnumerable<string> zipFiles, string extractPath, string originFile)
-        {
-            Console.WriteLine($"Checking for {Path.GetFileNameWithoutExtension(originFile)}");
-            var same = 0;
-            var diff = 0;
-            foreach (var fileName in zipFiles)
-            {
-                var directoryName = Path.GetFileNameWithoutExtension(fileName);
-                var directoryToEditName = Path.Combine(extractPath, directoryName, "WorkItem Tracking", "Categories.xml");
-                // find typefrom file
-                var fileToCheck = $"{directoryToEditName}";
-
-
-                if (!File.Exists(fileToCheck))
-                {
-                    Console.WriteLine($"Cannot find file to Check '{fileToCheck}' inside of '{directoryName}'");
-                    continue;
-                }
-                // read org file
-                var originalFileContent = File.ReadAllText(originFile);
-                // read file to check
-                var fileToheckContent = File.ReadAllText(fileToCheck);
-                // check contents
-
-                if (string.Compare(originalFileContent, fileToheckContent) > 0)
-                {
-                    Console.WriteLine($"File in '{directoryName}' differs from original");
-                    diff++;
-                }
-                else
-                {
-                    //Console.WriteLine($"\tFile in '{directoryName}' is the same as original");
-                    same++;
-                }
-            }
-
-            Console.WriteLine($"\tStatus for '{Path.GetFileNameWithoutExtension(originFile)}': {same} files are the same, {diff} files differ in content");
-        }
-        static void CheckFileContentsWorkItems(IEnumerable<string> zipFiles, string extractPath, string originFile)
-        {
-            Console.WriteLine($"Checking for {Path.GetFileNameWithoutExtension(originFile)}");
-            var same = 0;
-            var diff = 0;
-            foreach (var fileName in zipFiles)
-            {
-                var directoryName = Path.GetFileNameWithoutExtension(fileName);
-                var directoryToEditName = Path.Combine(extractPath, directoryName, "WorkItem Tracking", "WorkItems.xml");
-                // find typefrom file
-                var fileToCheck = $"{directoryToEditName}";
-
-
-                if (!File.Exists(fileToCheck))
-                {
-                    Console.WriteLine($"Cannot find file to Check '{fileToCheck}' inside of '{directoryName}'");
-                    continue;
-                }
-                // read org file
-                var originalFileContent = File.ReadAllText(originFile);
-                // read file to check
-                var fileToheckContent = File.ReadAllText(fileToCheck);
-                // check contents
-
-                var diffIndex = string.Compare(originalFileContent, fileToheckContent);
-                if (diffIndex > 0)
-                {
-                    Console.WriteLine($"File in '{directoryName}' differs from original. DiffIndex = {diffIndex}");
-                    diff++;
-                }
-                else
-                {
-                    //Console.WriteLine($"\tFile in '{directoryName}' is the same as original");
-                    same++;
-                }
-            }
-
-            Console.WriteLine($"\tStatus for '{Path.GetFileNameWithoutExtension(originFile)}': {same} files are the same, {diff} files differ in content");
-        }
-
+        
         static void CheckFileContents()
         {
             var processTemplates = GetCleanedProcessTemplateList();
@@ -827,7 +720,6 @@ namespace VSTSClient.ProcessTemplate
                 case "CodeReviewRequest.xml":
                 case "CodeReviewResponse.xml":
                 case "Epic.xml":
-                case "export.log":
                 case "Feature.xml":
                 case "FeedbackRequest.xml":
                 case "FeedbackResponse.xml":

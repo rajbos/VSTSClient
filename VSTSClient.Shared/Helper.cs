@@ -74,7 +74,8 @@ namespace VSTSClient.Shared
         /// <param name="logMessages">Indicator if logging will be shown</param>
         /// <returns>List of all processtemplates in VSTS</returns>
         public static List<Process> GetAllProcessTemplates(bool logMessages = true)
-        {            
+        {
+            Console.WriteLine($"Checking available processes in VSTS");
             ProcessHttpClient processClient = connection.GetClient<ProcessHttpClient>();
 
             var processes = processClient.GetProcessesAsync().Result;

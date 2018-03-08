@@ -5,13 +5,13 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("VSTSProcessZipper")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("VSTSClient.ProcessTemplate")]
+[assembly: AssemblyDescription("https://github.com/rajbos/VSTSClient")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("VSTSProcessZipper")]
-[assembly: AssemblyCopyright("Copyright ©  2018")]
-[assembly: AssemblyTrademark("")]
+[assembly: AssemblyCompany("https://github.com/rajbos/VSTSClient")]
+[assembly: AssemblyProduct("VSTSClient.ProcessTemplate")]
+[assembly: AssemblyCopyright("Copyright © 2018")]
+[assembly: AssemblyTrademark("https://github.com/rajbos/VSTSClient")]
 [assembly: AssemblyCulture("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible
