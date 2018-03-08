@@ -31,6 +31,7 @@ namespace VSTSClient.ProcessTemplate
             rezipPath = Path.Combine(basePath, "Rezipped files"); // todo: check for existance
             changedFilesPath = Path.Combine(basePath, "Changed files"); // todo: check for existance
 
+            Helper.LoadSecrets();
             //ExecutionOptions();
             ExportProcessTemplateZip("Information_Management", startPath);
 
@@ -59,13 +60,11 @@ namespace VSTSClient.ProcessTemplate
 
                 if (bytes != null)
                 {
-                    //Byte[] bytes = Convert.FromBase64String(vm.data);
-
                     File.WriteAllBytes(Path.Combine(startPath, processTemplateName + ".zip"), bytes);
                 }
                 else
                 {
-                   // todo
+                   // todo: log error
                 }
             }
         }
