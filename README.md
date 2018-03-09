@@ -1,4 +1,4 @@
-# VSTSClient
+# VSTSClient.WIT
 Client application to talk to Visual Studio Team Services and perform administration tasks.
 
 Currently supported:
@@ -10,3 +10,19 @@ Currently supported:
 * Convert all work items from a certain work item type to another one
 
 Don't forget to add a secrets.config and include the VSTS Url and PAT in it.See LoadSecrets().
+
+
+# VSTSClient.ProcessTemplate
+Client application to talk to Visual Studio Team Services to export, change and import ProcessTemplate packages in bulk.
+
+Currently supported:
+
+* Export a list of process templates to disk
+
+Use that list to perform these tasks:  
+* Export the process template to zip files
+* Unzip these files
+* Perform checks on them to figure out if all templates are alike
+* Update part of the template (e.g. update 'Epic.xml')
+* Rezip these files
+* Import these process templates back into VSTS
