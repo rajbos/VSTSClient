@@ -50,9 +50,9 @@ namespace VSTSClient.ProcessTemplate
                     .Add("l|list", "List available process templates, adding '{s}' will save this list to disk", option => listTemplates = option != null)
 
                     .Add("c|connect", "Connect", option => connect = option != null)
-                    .Add("url|urlconnection", "VSTS url connection to use", option => url = option)
-                    .Add("pat|pattoken", "Personal Access Token to use", option => pattoken = option)
-                    .Add("st|storagelocation", "Path to local folder to use", option => storage = option)
+                    .Add("url|urlconnection=", "VSTS url connection to use", option => url = option)
+                    .Add("pat|pattoken=", "Personal Access Token to use", option => pattoken = option)
+                    .Add("st|storagelocation=", "Path to local folder to use", option => storage = option)
 
                     .Add("s|save", "Save list to disk", option => saveToDisk = option != null)
                     .Add("hd|hide", "Hide default templates", option => hideDefaults = option != null)
@@ -129,6 +129,15 @@ namespace VSTSClient.ProcessTemplate
             if (String.IsNullOrWhiteSpace(basePath))
             {
                 LogHelper.LogError(new string[] { $"BasePath setting is empty. Please check the config file for this value or pass it in with a parameter", "Execution stopped." });
+                Environment.Exit(-1);
+            }
+
+            // test if path is even valid:
+            if (!Directory.Exists(basePath))
+            {
+                LogHelper.LogError(new string[] { $"Error checking storage path:"});
+                Console.WriteLine($"{basePath}");
+                LogHelper.LogError(new string[] { $"Execution stopped." });
                 Environment.Exit(-1);
             }
 
