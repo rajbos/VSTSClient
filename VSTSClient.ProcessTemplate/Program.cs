@@ -128,7 +128,7 @@ namespace VSTSClient.ProcessTemplate
             
             if (String.IsNullOrWhiteSpace(basePath))
             {
-                LogError(new string[] { $"BasePath setting is empty. Please check the config file for this value or pass it in with a parameter", "Execution stopped." });
+                LogHelper.LogError(new string[] { $"BasePath setting is empty. Please check the config file for this value or pass it in with a parameter", "Execution stopped." });
                 Environment.Exit(-1);
             }
 
@@ -163,7 +163,7 @@ namespace VSTSClient.ProcessTemplate
                     }
                     catch (Exception e)
                     {
-                        LogError(new string[] { $"Error creating the folder '{directory}'. Exception message: {e.Message}", "Execution stopped." });
+                        LogHelper.LogError(new string[] { $"Error creating the folder '{directory}'. Exception message: {e.Message}", "Execution stopped." });
                         errors++;
                     }
                 }
@@ -186,7 +186,7 @@ namespace VSTSClient.ProcessTemplate
 
             if (!File.Exists(processTemplatesListFileName))
             {
-                LogError(new string[]
+                LogHelper.LogError(new string[]
                 {
                     $"Cannot find process list file in location '{processTemplatesListFileName}'",
                     $"Please use the list function in combination with the save option first"
@@ -203,7 +203,7 @@ namespace VSTSClient.ProcessTemplate
                 var locatedProcess = processes.FirstOrDefault(item => item.Name == line);
                 if (locatedProcess == null)
                 {
-                    LogError(new string[]
+                    LogHelper.LogError(new string[]
                     {
                         $"Cannot find process template with name '{line}' in VSTS. Please check the template name"
                     });
@@ -240,20 +240,6 @@ namespace VSTSClient.ProcessTemplate
             {
                 ExportProcessTemplateZip(processesTodo, startPath);
             }
-        }
-
-        /// <summary>
-        /// Central error logging, including text colorization
-        /// </summary>
-        /// <param name="messages">Messages to log</param>
-        private static void LogError(string[] messages)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            foreach (var message in messages)
-            {
-                Console.WriteLine(message);
-            }
-            Console.ForegroundColor = ConsoleColor.White;
         }
 
         /// <summary>
@@ -337,7 +323,7 @@ namespace VSTSClient.ProcessTemplate
                         var fileName = Path.Combine(fromPath, process.Name + ".zip");
                         if (!File.Exists(fileName))
                         {
-                            LogError(new string[] 
+                            LogHelper.LogError(new string[] 
                             {
                                 $"Cannot find zip file for process {process.Name} in location {fromPath}",
                                 $"This template will be skipped."
@@ -369,7 +355,7 @@ namespace VSTSClient.ProcessTemplate
                                 {
                                     messages.Add($"\tDescription: {validationResult.description}, Error: {validationResult.error}, File: {validationResult.file}, Issuetype: {validationResult.issueType}, Line:{validationResult.line}");
                                 }
-                                LogError(messages.ToArray());
+                                LogHelper.LogError(messages.ToArray());
 
                                 // go to the next process
                                 continue;
@@ -391,7 +377,7 @@ namespace VSTSClient.ProcessTemplate
                     }
                     catch (Exception e)
                     {
-                        LogError(new string[] { $"\tError importing process template for '{process.Name}', error: {e.Message}" });
+                        LogHelper.LogError(new string[] { $"\tError importing process template for '{process.Name}', error: {e.Message}" });
                     }
                 }
 
@@ -463,14 +449,14 @@ namespace VSTSClient.ProcessTemplate
                         }
                         else
                         {
-                            LogError(new string[] { $"\tGot an empty file from VSTS while downloading ProcessTemplate for '{process.Name}'" });
+                            LogHelper.LogError(new string[] { $"\tGot an empty file from VSTS while downloading ProcessTemplate for '{process.Name}'" });
                         }
 
                         success++;
                     }
                     catch (Exception e)
                     {
-                        LogError(new string[] { $"\tError downloading ProcessTemplate for '{process.Name}', error: {e.Message}" });
+                        LogHelper.LogError(new string[] { $"\tError downloading ProcessTemplate for '{process.Name}', error: {e.Message}" });
                     }
                 }
 
@@ -759,7 +745,7 @@ namespace VSTSClient.ProcessTemplate
                     paths.AddRange(new List<string> { "WorkItem Tracking", "TypeDefinitions" });
                     break;                
                 default:
-                    LogError(new string[] { $"File '{name}' is not supported yet" });
+                    LogHelper.LogError(new string[] { $"File '{name}' is not supported yet" });
                     break;
             }
 
