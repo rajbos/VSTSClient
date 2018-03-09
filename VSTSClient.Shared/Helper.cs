@@ -4,6 +4,8 @@ using Microsoft.VisualStudio.Services.WebApi;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
+using System.IO.IsolatedStorage;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -14,8 +16,8 @@ namespace VSTSClient.Shared
 {
     public static class Helper
     {
-        public static string CollectionUri { get; set; }
-        public static string PersonalAccessToken { get; set; }
+        public static string CollectionUri;
+        public static string PersonalAccessToken;
         public static VssConnection connection { get; set; }
 
         /// <summary>
@@ -100,7 +102,7 @@ namespace VSTSClient.Shared
 
             return processes.OrderBy(item => item.Name).ToList();
         }
-
+        
         /// <summary>
         /// List all process templates, with multiple properties
         /// </summary>

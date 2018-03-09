@@ -45,11 +45,13 @@ namespace VSTSClient.ProcessTemplate
                 var pattoken = "";
                 var storage = "";
 
+                LocalStorageHelper.RetrieveConnectionData(out basePath, out Helper.CollectionUri, out Helper.PersonalAccessToken);
+
                 var option_set = new OptionSet()
                     .Add("?|help|h", "Prints out the options.", option => help = option != null)
                     .Add("l|list", "List available process templates, adding '{s}' will save this list to disk", option => listTemplates = option != null)
 
-                    .Add("c|connect", "Connect", option => connect = option != null)
+                    .Add("sc|saveconnection", "Save connection information", option => connect = option != null)
                     .Add("url|urlconnection=", "VSTS url connection to use", option => url = option)
                     .Add("pat|pattoken=", "Personal Access Token to use", option => pattoken = option)
                     .Add("st|storagelocation=", "Path to local folder to use", option => storage = option)
@@ -81,12 +83,41 @@ namespace VSTSClient.ProcessTemplate
 
 
                 Console.WriteLine("");
+
+                if (!string.IsNullOrWhiteSpace(storage))
+                {
+                    // overwrite the basepath with the given parameter value
+                    basePath = storage;
+                }
+
                 // check if all folders are available:
-                CheckFolders(storage);
-                // load all the necessary secrets
-                if (!Helper.LoadSecrets(url, pattoken))
+                if (!CheckFolders(basePath))
                 {
                     return;
+                }
+
+                if (!string.IsNullOrWhiteSpace(url))
+                {
+                    // overwrite the url with the given parameter value
+                    Helper.CollectionUri = url;
+                }
+
+                if (!string.IsNullOrWhiteSpace(pattoken))
+                {
+                    // overwrite the PersonalAccessToken with the given parameter value
+                    Helper.PersonalAccessToken = pattoken;
+                }
+
+                // load all the necessary secrets
+                if (!Helper.LoadSecrets(Helper.CollectionUri, Helper.PersonalAccessToken))
+                {
+                    return;
+                }
+
+                if (connect)
+                {
+                    // save the current connection information for later usage
+                    LocalStorageHelper.StoreConnectionData(basePath, Helper.CollectionUri, Helper.PersonalAccessToken);
                 }
 
                 if (listTemplates) { ListTemplates(saveToDisk, hideDefaults); };
@@ -115,7 +146,7 @@ namespace VSTSClient.ProcessTemplate
         /// <summary>
         /// Load and check all neccesary folders for availablilty
         /// </summary>
-        private static void CheckFolders(string storage)
+        private static bool CheckFolders(string storage)
         {
             // load setting from appSettings
             basePath = ConfigurationManager.AppSettings["BasePath"];
@@ -129,7 +160,7 @@ namespace VSTSClient.ProcessTemplate
             if (String.IsNullOrWhiteSpace(basePath))
             {
                 LogHelper.LogError(new string[] { $"BasePath setting is empty. Please check the config file for this value or pass it in with a parameter", "Execution stopped." });
-                Environment.Exit(-1);
+                return false;
             }
 
             // test if path is even valid:
@@ -138,7 +169,7 @@ namespace VSTSClient.ProcessTemplate
                 LogHelper.LogError(new string[] { $"Error checking storage path:"});
                 Console.WriteLine($"{basePath}");
                 LogHelper.LogError(new string[] { $"Execution stopped." });
-                Environment.Exit(-1);
+                return false;
             }
 
             // init default directories
@@ -150,8 +181,10 @@ namespace VSTSClient.ProcessTemplate
             // check for or create if those folders do exist
             if (!CheckOrCreateFolders(new string[] { startPath, extractPath, rezipPath, changedFilesPath }))
             {
-                Environment.Exit(-1);
+                return false;
             }
+
+            return true;
         }
 
         /// <summary>
