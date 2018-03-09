@@ -27,84 +27,108 @@ namespace VSTSClient.ProcessTemplate
 
         static void Main(string[] args)
         {
-            // check if all folders are available:
-            CheckFolders();
-
-            var listTemplates = false;
-            var help = false;
-            var saveToDisk = false;
-            var export = false;
-            var hideDefaults = false;
-            var import = false;
-            var unzip = false;
-            var zip = false;
-            var check = false;
-            var copy = false;
-
-            var option_set = new OptionSet()
-                .Add("?|help|h", "Prints out the options.", option => help = option != null)
-                .Add("l|list", "List available process templates, adding '{s}' will save this list to disk", option => listTemplates = option != null)
-                .Add("s|save", "Save list to disk", option => saveToDisk = option != null)
-                .Add("hd|hide", "Hide default templates", option => hideDefaults = option != null)
-                .Add("e|export", "Export all process templates (located in the saved listfile) from VSTS to disk", option => export = option != null)
-
-                .Add("u|unzip", "Unzip all process templates (located in the saved listfile)", option => unzip = option != null)
-                
-                .Add("ch|check", "Check if all file contents in the unzipped directories match", option => check = option != null)
-                .Add("co|copy", "Copy alls from the changed directory to the process template directories (oaded from the saved listfile) ", option => copy = option != null)
-
-                .Add("z|zip", "Rezip all process templates (located in the saved listfile) from folders to zipfiles", option => zip = option != null)
-                
-                .Add("i|import", "Import all process templates (located in the saved listfile) from VSTS to disk", option => import = option != null)
-            ;
-
             try
             {
-                option_set.Parse(args);
-            }
-            catch (OptionException)
-            {
-                ShowHelp("Error - usage is:", option_set);
-            }
+                var listTemplates = false;
+                var help = false;
+                var saveToDisk = false;
+                var export = false;
+                var hideDefaults = false;
+                var import = false;
+                var unzip = false;
+                var zip = false;
+                var check = false;
+                var copy = false;
 
-            if (help) { ShowHelp("Help - usage is:", option_set); }
-                        
+                var connect = false;
+                var url = "";
+                var pattoken = "";
+                var storage = "";
 
-            Helper.LoadSecrets();
-            Console.WriteLine("");
+                var option_set = new OptionSet()
+                    .Add("?|help|h", "Prints out the options.", option => help = option != null)
+                    .Add("l|list", "List available process templates, adding '{s}' will save this list to disk", option => listTemplates = option != null)
 
-            if (listTemplates) { ListTemplates(saveToDisk, hideDefaults); };
-            if (export) { ExportProcessTemplates(); };
+                    .Add("c|connect", "Connect", option => connect = option != null)
+                    .Add("url|urlconnection", "VSTS url connection to use", option => url = option)
+                    .Add("pat|pattoken", "Personal Access Token to use", option => pattoken = option)
+                    .Add("st|storagelocation", "Path to local folder to use", option => storage = option)
 
-            if (unzip) { Extract(); }
+                    .Add("s|save", "Save list to disk", option => saveToDisk = option != null)
+                    .Add("hd|hide", "Hide default templates", option => hideDefaults = option != null)
+                    .Add("e|export", "Export all process templates (located in the saved listfile) from VSTS to disk", option => export = option != null)
 
-            if (check) { CheckFileContents(); }
-            if (copy) { CopyFiles(); }
+                    .Add("u|unzip", "Unzip all process templates (located in the saved listfile)", option => unzip = option != null)
 
-            if (zip) { ZipDirectoriesBackToZip(); }                       
+                    .Add("ch|check", "Check if all file contents in the unzipped directories match", option => check = option != null)
+                    .Add("co|copy", "Copy alls from the changed directory to the process template directories (oaded from the saved listfile) ", option => copy = option != null)
 
-            if (import) { ImportProcessTemplates(); };
-                        
+                    .Add("z|zip", "Rezip all process templates (located in the saved listfile) from folders to zipfiles", option => zip = option != null)
 
-            if (Debugger.IsAttached)
-            {
+                    .Add("i|import", "Import all process templates (located in the saved listfile) from VSTS to disk", option => import = option != null)
+                ;
+
+                try
+                {
+                    option_set.Parse(args);
+                }
+                catch (OptionException)
+                {
+                    ShowHelp("Error - usage is:", option_set);
+                }
+
+                if (help) { ShowHelp("Help - usage is:", option_set); }
+
+
                 Console.WriteLine("");
-                Console.WriteLine("Hit 'return'");
-                Console.ReadLine();
+                // check if all folders are available:
+                CheckFolders(storage);
+                // load all the necessary secrets
+                if (!Helper.LoadSecrets(url, pattoken))
+                {
+                    return;
+                }
+
+                if (listTemplates) { ListTemplates(saveToDisk, hideDefaults); };
+                if (export) { ExportProcessTemplates(); };
+
+                if (unzip) { Extract(); }
+
+                if (check) { CheckFileContents(); }
+                if (copy) { CopyFiles(); }
+
+                if (zip) { ZipDirectoriesBackToZip(); }
+
+                if (import) { ImportProcessTemplates(); };
+            }
+            finally
+            {
+                if (Debugger.IsAttached)
+                {
+                    Console.WriteLine("");
+                    Console.WriteLine("Hit 'return'");
+                    Console.ReadLine();
+                }
             }
         }
 
         /// <summary>
         /// Load and check all neccesary folders for availablilty
         /// </summary>
-        private static void CheckFolders()
+        private static void CheckFolders(string storage)
         {
             // load setting from appSettings
             basePath = ConfigurationManager.AppSettings["BasePath"];
+
+            if (!string.IsNullOrWhiteSpace(storage))
+            {
+                // overwrite the setting from the app.config
+                basePath = storage;
+            }
             
             if (String.IsNullOrWhiteSpace(basePath))
             {
-                LogError(new string[] { $"BasePath setting is empty. Please check the config file for this value", "Execution stopped." });
+                LogError(new string[] { $"BasePath setting is empty. Please check the config file for this value or pass it in with a parameter", "Execution stopped." });
                 Environment.Exit(-1);
             }
 

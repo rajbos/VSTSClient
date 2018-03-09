@@ -64,7 +64,7 @@ namespace VSTSClient
 
             if (help) { ShowHelp("Help - usage is:", option_set); }
 
-            if (!Helper.LoadSecrets())
+            if (!Helper.LoadSecrets("", ""))
             {
                 Environment.Exit(-1);
             }
