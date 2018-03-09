@@ -1,5 +1,5 @@
 
-Start of a toolset to bulk edit workitems in VSTS and bulk edit process templates.
+Start of a toolset to bulk edit workitems in VSTS and bulk edit process templates.  
 **Note**: check the wiki for parameter usage.
 
 # VSTSClient.WIT
