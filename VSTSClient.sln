@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VSTSClient.WIT", "VSTSClient.WIT\VSTSClient.WIT2.csproj", "{0D1E656E-A40D-47AF-BCE3-72EB7120A1F7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VSTSClient.WIT", "VSTSClient.WIT\VSTSClient.WIT.csproj", "{0D1E656E-A40D-47AF-BCE3-72EB7120A1F7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VSTSClient.ProcessTemplate", "VSTSClient.ProcessTemplate\VSTSClient.ProcessTemplate.csproj", "{22B1D6AC-0C77-4298-9639-20D024A0C647}"
 EndProject
