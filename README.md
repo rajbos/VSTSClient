@@ -1,4 +1,6 @@
 
+[![Build Status](https://raj-bos.visualstudio.com/VSTSClient/_apis/build/status/rajbos.VSTSClient)](https://raj-bos.visualstudio.com/VSTSClient/_build/latest?definitionId=4)
+
 Start of a toolset to bulk edit workitems in VSTS and bulk edit process templates.  
 **Note**: check the wiki for parameter usage.
 
